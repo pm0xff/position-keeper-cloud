@@ -1,6 +1,6 @@
 // packages/render-indicators/src/index.ts
-import dotenv from 'dotenv';
-import express, { Request, Response } from 'express';
+import * as dotenv from 'dotenv';
+const express = require('express');
 import { IndicatorService } from './services/IndicatorService';
 import { DatabaseService } from './services/DatabaseService';
 import { SignalGenerator } from './services/SignalGenerator';
@@ -16,7 +16,7 @@ class IndicatorUpdaterApp {
   private tokenManager: TokenManager;
   private updateInterval: number;
   private isRunning: boolean = false;
-  private app: express.Application;
+  private app: any;
   private port: number;
 
   constructor() {
@@ -35,7 +35,7 @@ class IndicatorUpdaterApp {
   }
 
   private setupHealthEndpoint(): void {
-    this.app.get('/health', (req: Request, res: Response) => {
+    this.app.get('/health', (req: any, res: any) => {
       res.json({
         status: 'healthy',
         uptime: process.uptime(),
@@ -45,7 +45,7 @@ class IndicatorUpdaterApp {
       });
     });
 
-    this.app.get('/', (req: Request, res: Response) => {
+    this.app.get('/', (req: any, res: any) => {
       res.json({
         service: 'Position Keeper Indicators',
         status: this.isRunning ? 'running' : 'stopped',
