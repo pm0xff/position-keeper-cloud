@@ -107,24 +107,41 @@ export class IndicatorService {
     const url = `https://api.dexscreener.com/latest/dex/pairs/solana/${pairAddress}`;
     
     try {
-      const response = await axios.get(url, { timeout: 10000 });
+      console.log(`[DexScreener] Fetching: ${url}`);
+      
+      const response = await axios.get(url, { timeout: 15000 });
+      
+      console.log(`[DexScreener] Response status: ${response.status}`);
+      console.log(`[DexScreener] Response data structure:`, JSON.stringify(response.data, null, 2));
+      
       const pairData = response.data?.pair;
 
       if (!pairData) {
-        throw new Error('No pair data returned from DexScreener');
+        console.error(`[DexScreener] No pair data in response. Full response:`, response.data);
+        throw new Error(`No pair data returned from DexScreener for pair ${pairAddress}`);
       }
 
-      return {
+      const result = {
         price: parseFloat(pairData.priceNative || '0'),
         volume: parseFloat(pairData.volume?.h24?.toString() || '0'),
         marketCap: parseFloat(pairData.marketCap?.toString() || pairData.fdv?.toString() || '0'),
         quoteToken: pairData.quoteToken?.symbol || 'SOL'
       };
 
+      console.log(`[DexScreener] Parsed result:`, result);
+      return result;
+
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`DexScreener API error: ${error.message}`);
+        console.error(`[DexScreener] Axios error for ${pairAddress}:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: url
+        });
+        throw new Error(`DexScreener API error: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`);
       }
+      console.error(`[DexScreener] General error for ${pairAddress}:`, error);
       throw error;
     }
   }
