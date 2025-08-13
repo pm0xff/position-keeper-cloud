@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: position-keeper-indicators
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: UPDATE_INTERVAL_MS
+        value: 60000
+      - key: MIN_VERTEX_AGE
+        value: 20
+      - key: MAX_VERTEX_AGE
+        value: 120
+      - key: SIGNAL_EXPIRY_MINUTES
+        value: 15
+      - key: STABILITY_BUFFER
+        value: 3
+      - key: WEIGHTED_ALPHA
+        value: 0.5
+      - key: WEIGHTED_POLYNOMIAL
+        value: TRUE
+      - key: LOG_LEVEL
+        value: info
+      # Secrets (set in Render dashboard):
+      # - CLOUDFLARE_D1_DATABASE_URL
+      # - CLOUDFLARE_D1_TOKEN  
+      # - QUICKNODE_URL
+    autoDeploy: true
+    region: oregon
+    disk:
+      name: data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
