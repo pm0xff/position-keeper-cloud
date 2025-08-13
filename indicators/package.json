@@ -4,12 +4,9 @@
   "description": "Continuous Solana token data collection service",
   "main": "dist/index.js",
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "npx tsx src/index.ts",
-    "clean": "rimraf dist",
-    "test": "npm run build && npm run start",
-    "postinstall": "npm run build"
+    "dev": "npx tsx src/index.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.87.6",
@@ -22,11 +19,9 @@
     "@types/node": "^20.11.0",
     "@types/express": "^4.17.21",
     "tsx": "^4.6.0",
-    "typescript": "^5.3.0",
-    "rimraf": "^5.0.5"
+    "typescript": "^5.3.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=18.0.0"
   }
 }
