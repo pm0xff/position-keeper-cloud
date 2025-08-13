@@ -61,19 +61,23 @@ export class IndicatorService {
     // Get current price data
     const priceData = await this.fetchPriceData(pair);
     
-    // Store price data in database
-    await this.databaseService.savePriceData({
-      symbol,
-      price: priceData.price,
-      volume: priceData.volume,
-      marketCap: priceData.marketCap,
-      timestamp: new Date()
-    });
+    // Store price data in database (but don't fail if database is down)
+    try {
+      await this.databaseService.savePriceData({
+        symbol,
+        price: priceData.price,
+        volume: priceData.volume,
+        marketCap: priceData.marketCap,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.warn(`⚠️  Failed to save price data for ${symbol} to database:`, error);
+    }
 
     // Get historical prices for signal generation
     const prices = await this.databaseService.getRecentPrices(symbol, 360); // Last 6 hours
     
-    if (prices.length >= 360) {
+    if (prices.length >= 60) { // Need at least 1 hour of data for basic signals
       // Generate signal
       const signal = this.signalGenerator.generateSignal(token.symbol, prices);
       
@@ -86,11 +90,11 @@ export class IndicatorService {
       // Update token with new signal
       await this.tokenManager.updateToken(symbol, { signal });
 
-      console.log(`✅ ${symbol}: Price=${priceData.price.toFixed(8)}, Signal=${signal.direction} (${(signal.confidence * 100).toFixed(0)}%)`);
+      console.log(`✅ ${symbol}: Price=${priceData.price.toFixed(8)}, Signal=${signal.direction} (${(signal.confidence * 100).toFixed(0)}%) [${prices.length} data points]`);
     } else {
-      // Not enough data for signal generation
+      // Not enough data for signal generation yet - this is normal for new deployments
       result.signals.NONE++;
-      console.log(`⏳ ${symbol}: Price=${priceData.price.toFixed(8)}, Insufficient data for signals (${prices.length}/360)`);
+      console.log(`⏳ ${symbol}: Price=${priceData.price.toFixed(8)}, Building history (${prices.length}/60 data points needed for signals)`);
     }
   }
 

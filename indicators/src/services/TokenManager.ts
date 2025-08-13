@@ -9,6 +9,8 @@ export class TokenManager {
   constructor(private databaseService: DatabaseService) {}
 
   async loadTokens(): Promise<void> {
+    console.log('[TokenManager] Loading tokens...');
+    
     try {
       // Try to load from database first
       const dbTokens = await this.databaseService.getTokens();
@@ -19,58 +21,69 @@ export class TokenManager {
         return;
       }
 
-      // Fallback to default tokens if database is empty
-      await this.initializeDefaultTokens();
+      console.log('[TokenManager] No tokens in database, initializing defaults...');
       
     } catch (error) {
-      console.warn('⚠️  Failed to load tokens from database, using defaults:', error);
-      await this.initializeDefaultTokens();
+      console.warn('⚠️  Database error when loading tokens:', error);
+      console.log('[TokenManager] Falling back to default tokens...');
     }
+
+    // Always initialize defaults if database is empty or fails
+    await this.initializeDefaultTokens();
   }
 
   private async initializeDefaultTokens(): Promise<void> {
-    // Default token configuration based on your existing setup
+    // Real token configuration from your tokens.json
     const defaultTokens: TokenConfig[] = [
       {
         symbol: 'MASK',
-        pair: 'BkKRpAUFVZJWRzJhiJWQfJV1B1aVvSPpS48Bz4UXa1ot',
-        mint: 'CiKu5d4h5xZp9hCvDn6aqZc8s1VVdS1jW7AJ4FY2Ty4z',
+        pair: 'GWPLjamb5ZxrGbTsYNWW7V3p1pAMryZSfaPFTdaEsWgC',
+        mint: '6MQpbiTC2YcogidTmKqMLK82qvE9z5QEm7EP3AEDpump',
         active: true,
-        notes: 'Primary trading token'
+        notes: 'catwifmask - PumpSwap pair'
       },
       {
         symbol: 'BONK',
-        pair: 'FE8HL9QPDN3rqVJ8UCQWyKKBpd8PwcqPCdyQzXwSDUGU',
+        pair: '6oFWm7KPLfxnwMb3z5xwBoXNSPP3JJyirAPqPSiVcnsp',
         mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
         active: true,
-        notes: 'Secondary trading token'
+        notes: 'Bonk memecoin'
       },
       {
         symbol: 'WIF',
-        pair: 'J2BR7tCHFU7bvmwmtXhwu7sUhDPP8k3JwQH1rz3Fh9vF',
+        pair: 'EP2ib6dYdEeqD8MfE2ezHCxX3kP3K2eLKkirfPm5eyMx',
         mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
         active: true,
-        notes: 'Tertiary trading token'
+        notes: 'dogwifhat'
       },
       {
-        symbol: 'VIBE',
-        pair: 'EbmZPLrpY3q6J5PzVwMsQK1xXwBZY3pScvPzJNzVzVzV',
-        mint: 'G7nZR8cRzR5p8zKoJ3YPzCtPsBKzYfE2LnZMQJrYQMwY',
+        symbol: 'USELESS',
+        pair: 'Q2sPHPdUWFMg7M7wwrQKLrn619cAucfRsmhVJffodSp',
+        mint: 'Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk',
         active: true,
-        notes: 'Test token'
+        notes: 'This coin didn\'t perform'
+      },
+      {
+        symbol: 'PENGU',
+        pair: 'B4Vwozy1FGtp8SELXSXydWSzavPUGnJ77DURV2k4MhUV',
+        mint: '2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv',
+        active: true,
+        notes: 'Pengu on Raydium'
       }
     ];
 
     this.tokens = defaultTokens;
+    console.log('✅ Loaded real token configurations');
 
-    // Save to database for future use
+    // Try to save to database but don't fail if it doesn't work
     try {
+      console.log('[TokenManager] Attempting to save tokens to database...');
       for (const token of defaultTokens) {
         await this.databaseService.saveToken(token);
       }
-      console.log('✅ Initialized default tokens in database');
+      console.log('✅ Successfully saved tokens to database');
     } catch (error) {
-      console.warn('⚠️  Failed to save default tokens to database:', error);
+      console.warn('⚠️  Failed to save tokens to database (continuing with in-memory):', error);
     }
   }
 
@@ -94,14 +107,16 @@ export class TokenManager {
     }
 
     this.tokens[tokenIndex] = { ...this.tokens[tokenIndex], ...updates };
-
+    
+    // Try to save to database but don't fail if it doesn't work
     try {
       await this.databaseService.saveToken(this.tokens[tokenIndex]);
-      return true;
+      console.log(`✅ Updated token ${symbol} in database`);
     } catch (error) {
-      console.error(`Failed to update token ${symbol}:`, error);
-      return false;
+      console.warn(`⚠️  Failed to save ${symbol} to database (continuing with in-memory):`, error);
     }
+    
+    return true;
   }
 
   async addToken(token: TokenConfig): Promise<boolean> {
@@ -113,17 +128,8 @@ export class TokenManager {
     }
 
     this.tokens.push(token);
-
-    try {
-      await this.databaseService.saveToken(token);
-      console.log(`✅ Added new token: ${token.symbol}`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to add token ${token.symbol}:`, error);
-      // Remove from memory if database save failed
-      this.tokens = this.tokens.filter(t => t.symbol !== token.symbol);
-      return false;
-    }
+    console.log(`✅ Added new token: ${token.symbol} (in-memory)`);
+    return true;
   }
 
   async removeToken(symbol: string): Promise<boolean> {
@@ -134,15 +140,8 @@ export class TokenManager {
     }
 
     this.tokens.splice(tokenIndex, 1);
-
-    try {
-      await this.databaseService.deleteToken(symbol);
-      console.log(`✅ Removed token: ${symbol}`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to remove token ${symbol}:`, error);
-      return false;
-    }
+    console.log(`✅ Removed token: ${symbol} (in-memory)`);
+    return true;
   }
 
   getTokenCount(): number {

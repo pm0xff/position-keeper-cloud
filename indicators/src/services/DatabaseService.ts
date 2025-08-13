@@ -67,8 +67,10 @@ export class DatabaseService {
 
   private async executeQuery(sql: string, params: any[] = []): Promise<any> {
     try {
+      console.log(`[DB] Executing query: ${sql.substring(0, 100)}...`);
+      
       const response = await axios.post(
-        `${this.dbUrl}/query`,
+        this.dbUrl, // This should already include /query endpoint
         {
           sql,
           params
@@ -78,14 +80,26 @@ export class DatabaseService {
             'Authorization': `Bearer ${this.apiToken}`,
             'Content-Type': 'application/json'
           },
-          timeout: 10000
+          timeout: 15000
         }
       );
 
-      return response.data;
+      console.log(`[DB] Query response status: ${response.status}`);
+      
+      if (response.data.success === false) {
+        throw new Error(`D1 API Error: ${JSON.stringify(response.data.errors)}`);
+      }
+
+      return response.data.result;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`Database query failed: ${error.message}`);
+        console.error(`[DB] Axios error:`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: this.dbUrl
+        });
+        throw new Error(`Database query failed: ${error.response?.status} ${error.response?.statusText} - ${JSON.stringify(error.response?.data)}`);
       }
       throw error;
     }
@@ -95,11 +109,12 @@ export class DatabaseService {
     try {
       const result = await this.executeQuery('SELECT * FROM tokens');
       
-      if (!result.results || result.results.length === 0) {
+      if (!result || !result[0] || !result[0].results) {
+        console.log('[DB] No tokens found in database');
         return [];
       }
 
-      return result.results.map((row: any) => ({
+      return result[0].results.map((row: any) => ({
         symbol: row.symbol,
         pair: row.pair,
         mint: row.mint,
@@ -166,11 +181,11 @@ export class DatabaseService {
 
       const result = await this.executeQuery(sql, [symbol]);
       
-      if (!result.results) {
+      if (!result || !result[0] || !result[0].results) {
         return [];
       }
 
-      return result.results.map((row: any) => row.price);
+      return result[0].results.map((row: any) => row.price);
     } catch (error) {
       console.error(`Failed to get recent prices for ${symbol}:`, error);
       return [];
