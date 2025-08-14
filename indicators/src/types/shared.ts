@@ -1,4 +1,5 @@
-// src/types/shared.ts - Local shared types and utilities
+// src/types/shared.ts
+// Shared type definitions for the trading system
 
 export interface TrendSignal {
   direction: 'BUY' | 'SELL' | 'NONE';
@@ -14,6 +15,17 @@ export interface TrendSignal {
   magnitude?: number;
 }
 
+export interface RoutingInfo {
+  tradingCurrency: string;
+  nativeCurrency: string;
+  isDirect: boolean;
+  executionPath: string[];
+  confidence: number;
+  preferredDEX: string;
+  currencyMismatch: boolean;
+  lastChecked: string;
+}
+
 export interface TokenConfig {
   symbol: string;
   pair: string;
@@ -22,23 +34,8 @@ export interface TokenConfig {
   notes?: string;
   signal?: TrendSignal;
   metadata?: {
-    routing?: {
-      tradingCurrency: string;
-      nativeCurrency: string;
-      isDirect: boolean;
-      currencyMismatch: boolean;
-      lastChecked: string;
-    };
-  };
-}
-
-export interface ConfigFile {
-  tokens: TokenConfig[];
-  config: {
-    version: string;
-    lastUpdated: string;
-    description: string;
-    lastSignalUpdate?: string;
+    routing?: RoutingInfo;
+    [key: string]: any;
   };
 }
 
@@ -53,37 +50,205 @@ export interface UpdateResult {
   errors: string[];
 }
 
-// Timezone helper functions
-export function toLocalTimezone(date: Date | number = new Date()): string {
-  const dateObj = typeof date === 'number' ? new Date(date) : date;
-  
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Dublin',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(dateObj).replace(', ', 'T') + '.000+01:00';
+export interface IndicatorData {
+  symbol: string;
+  price: number;
+  native_price: number;
+  native_currency: string;
+  trading_currency: string;
+  currency_mismatch: number;
+  rsi_1m: number;
+  rsi_5m: number;
+  rsi_15m: number;
+  ema_1m: number;
+  ema_5m: number;
+  ema_15m: number;
+  ema_trend: string;
+  volume_24h: number;
+  market_cap: number;
+  volume_to_cap_ratio: number;
+  trend_score: number;
+  hourly_change_pct: number;
+  drawdown_from_peak: number;
+  volatility_pct: number;
+  decimals: number;
+  analysis_mode: string;
+  timestamp: Date;
 }
 
-// Helper to parse local timezone string back to Date object
-export function fromLocalTimezone(localTimeString: string): Date {
-  // Remove the timezone suffix and parse
-  const isoString = localTimeString.replace('.000+01:00', '.000Z');
-  const utcDate = new Date(isoString);
-  // Adjust for timezone offset (subtract 1 hour to get back to UTC)
-  return new Date(utcDate.getTime() - (60 * 60 * 1000));
+export interface SignalData {
+  symbol: string;
+  direction: string;
+  confidence: number;
+  reason: string;
+  vertex_age?: number;
+  trend_strength?: string;
+  pattern?: string;
+  magnitude?: number;
+  stable: number;
+  first_detected: number;
+  last_evaluated: number;
+  expires_at: number;
 }
 
-// Helper to create expiry time
-export function createExpiryTimestamp(
-  baseTime: Date | number = new Date(), 
-  minutesToAdd: number = 15
-): string {
-  const baseDate = typeof baseTime === 'number' ? new Date(baseTime) : baseTime;
-  const expiryDate = new Date(baseDate.getTime() + minutesToAdd * 60 * 1000);
-  return toLocalTimezone(expiryDate);
+export interface PriceData {
+  symbol: string;
+  price: number;
+  volume: number;
+  marketCap: number;
+  quoteToken: string;
+  timestamp: Date;
+}
+
+export interface TradingStrategy {
+  id?: number;
+  wallet_address: string;
+  strategy_name: string;
+  strategy_type: 'early_exit' | 'large_cap' | 'trailing_hold';
+  parameters: Record<string, any>;
+  active: boolean;
+  created_at?: number;
+}
+
+export interface Trade {
+  id?: number;
+  wallet_address?: string;
+  symbol: string;
+  strategy_type: string;
+  buy_price: number;
+  buy_timestamp: number;
+  buy_tx_id?: string;
+  entry_signal?: string;
+  sell_price?: number;
+  sell_timestamp?: number;
+  sell_tx_id?: string;
+  reason?: string;
+  amount_tokens: number;
+  pnl_pct?: number;
+  peak_pnl_pct?: number;
+  drawdown_pct?: number;
+  duration_seconds?: number;
+  is_backtest: number;
+  backtest_id?: string;
+}
+
+export interface SystemConfig {
+  key: string;
+  value: string;
+  description?: string;
+  updated_at?: number;
+}
+
+// API Response types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: number;
+}
+
+export interface DexScreenerPair {
+  chainId: string;
+  dexId: string;
+  url: string;
+  pairAddress: string;
+  baseToken: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  quoteToken: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  priceNative: string;
+  priceUsd: string;
+  txns: {
+    m5: { buys: number; sells: number };
+    h1: { buys: number; sells: number };
+    h6: { buys: number; sells: number };
+    h24: { buys: number; sells: number };
+  };
+  volume: {
+    h24: number;
+    h6: number;
+    h1: number;
+    m5: number;
+  };
+  priceChange: {
+    m5: number;
+    h1: number;
+    h6: number;
+    h24: number;
+  };
+  liquidity?: {
+    usd: number;
+    base: number;
+    quote: number;
+  };
+  fdv?: number;
+  marketCap?: number;
+}
+
+// Service interface types
+export interface IIndicatorService {
+  updateAllTokens(): Promise<UpdateResult>;
+}
+
+export interface IDatabaseService {
+  initialize(): Promise<void>;
+  getTokens(): Promise<TokenConfig[]>;
+  saveToken(token: TokenConfig): Promise<void>;
+  deleteToken(symbol: string): Promise<void>;
+  saveFullIndicators(indicators: IndicatorData): Promise<void>;
+  saveSignal(signal: SignalData): Promise<void>;
+  getActiveSignals(symbol?: string): Promise<any[]>;
+  getLatestIndicators(symbol?: string): Promise<any[]>;
+  close(): Promise<void>;
+}
+
+export interface ITokenManager {
+  getActiveTokens(): Promise<TokenConfig[]>;
+  getAllTokens(): Promise<TokenConfig[]>;
+  getToken(symbol: string): Promise<TokenConfig | null>;
+  addToken(token: TokenConfig): Promise<void>;
+  updateToken(symbol: string, updates: Partial<TokenConfig>): Promise<void>;
+  removeToken(symbol: string): Promise<void>;
+  toggleToken(symbol: string): Promise<void>;
+}
+
+// Utility types
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: number;
+  service?: string;
+  metadata?: Record<string, any>;
+}
+
+// Configuration types
+export interface ServiceConfig {
+  database: {
+    url: string;
+    token: string;
+  };
+  indicators: {
+    updateInterval: number;
+    maxHistoryLength: number;
+    signalConfig: {
+      minVertexAge: number;
+      maxVertexAge: number;
+      expiryMinutes: number;
+      stabilityBuffer: number;
+      confidenceThreshold: number;
+    };
+  };
+  api: {
+    dexScreenerBaseUrl: string;
+    requestTimeout: number;
+    retryAttempts: number;
+  };
 }
