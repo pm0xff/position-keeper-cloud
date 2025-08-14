@@ -143,7 +143,7 @@ class IndicatorUpdaterApp {
       console.log(`✅ Update cycle completed in ${duration}ms`);
       console.log(`📊 Processed: ${result.processed} tokens`);
       console.log(`📈 Signals: ${result.signals.BUY} BUY, ${result.signals.SELL} SELL, ${result.signals.NONE} NONE`);
-      console.log(`❌ Failed: ${result.failed} tokens`);
+      if(result.failed > 0){ console.log(`❌ Failed: ${result.failed} tokens`); }
 
       if (result.errors.length > 0) {
         console.warn('⚠️  Errors encountered:');
